@@ -7,7 +7,7 @@ Strictly unofficial polyfill for Web Audio API AudioWorklet. The processor runs 
 
 Tested in stable Chrome 64, Firefox 57 and Safari 11. Edge test is still pending.
 
-More info at [webaudiomodules.org](http://weboaudiomodules.org)
+More info at [webaudiomodules.org](http://www.webaudiomodules.org/blog/audioworklet_polyfill/)
 
 ## usage
 ```
