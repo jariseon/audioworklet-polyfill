@@ -81,9 +81,6 @@ AudioContext = window.AudioContext || window.webkitAudioContext;
     if (options.inputChannelCount.length  != options.numberOfInputs)  throw new Error("InvalidArgumentException");
     if (options.outputChannelCount.length != options.numberOfOutputs) throw new Error("InvalidArgumentException");
     
-    var curbuf = 0;
-    var bufferCount = 1;
-    
     // -- io configuration is currently static
     this.inputBus  = [];
     this.outputBus = [];
@@ -99,7 +96,7 @@ AudioContext = window.AudioContext || window.webkitAudioContext;
           if (nchannels <= 0) throw new Error("InvalidArgumentException");        
           var port = new Array(nchannels);
           for (var c=0; c<nchannels; c++)
-            port[c] = new SharedArrayBuffer(bufferCount * options.samplesPerBuffer * 4);
+            port[c] = new SharedArrayBuffer(options.samplesPerBuffer * 4);
           bus[i] = port;
         }
         return bus;
@@ -111,8 +108,8 @@ AudioContext = window.AudioContext || window.webkitAudioContext;
     this.outputBus = configureBus("output", options);
 
     this.processorState = "pending";
-    var args = { node:this.id, name:nodeName, options:options, sampleRate:context.sampleRate }
-    args.bus = { input:this.inputBus, output:this.outputBus, bufferCount:bufferCount }
+    var args = { node:this.id, name:nodeName, options:options }
+    args.bus = { input:this.inputBus, output:this.outputBus }
     AWPF.worker.postMessage({ type:"createProcessor", args:args }, [messageChannel.port2])
 
     var spn = context.createScriptProcessor(options.samplesPerBuffer, 0,1);
@@ -140,11 +137,9 @@ AudioContext = window.AudioContext || window.webkitAudioContext;
       var ibuff = ape.inputBuffer;
       var obuff = ape.outputBuffer;
       var outL  = obuff.getChannelData(0);
-      var start = curbuf * outL.length;
-      outL.set(outbuf.subarray(start, start + outL.length));
+      outL.set(outbuf);
       
-      curbuf = ((curbuf + 1) % bufferCount) | 0;
-      var msg = { type:"process", processor:this.processor, index:curbuf, time:context.currentTime };
+      var msg = { type:"process", processor:this.processor, time:context.currentTime };
       AWPF.worker.postMessage(msg);
     }
   }
@@ -168,6 +163,7 @@ AudioContext = window.AudioContext || window.webkitAudioContext;
     window.AudioWorkletNode = AWPF.AudioWorkletNode;
     
     AWPF.worker = new Worker("audioworker.js");
+    AWPF.worker.postMessage({ type:"init", sampleRate:scope.sampleRate });
     
     console.warn('Using Worker polyfill of AudioWorklet, audio will not be performance isolated.');
     AWPF.isAudioWorkletPolyfilled = true;
