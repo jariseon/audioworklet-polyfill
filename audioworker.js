@@ -13,10 +13,14 @@ AWGS.AudioWorkletGlobalScope = function () {
   var ctors = {}; // node name to processor definition map
 
   function registerOnWorker(name, ctor) {
-    if (!ctors[name]) { // register only once (?)
+    if (!ctors[name]) {
       var descriptor = eval(ctor.name).parameterDescriptors
       ctors[name] = ctor;
       postMessage({ type:"register", name:name, descriptor:descriptor });
+    }
+    else {
+      postMessage({ type:"state", node:nodeID, state:"error" });
+      throw new Error("AlreadyRegistered");      
     }
   };
 
