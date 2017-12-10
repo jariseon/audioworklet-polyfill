@@ -16,7 +16,7 @@ More info at [webaudiomodules.org](http://www.webaudiomodules.org/blog/audiowork
 
 // --- before creating the AudioWorkletNode
 var context;
-if (AWPF.isAudioWorkletPolyfilled) {
+if (AWPF.isAudioWorkletPolyfilled)
   context = AWPF.context;
 else context = new AudioContext();
 ```
@@ -27,3 +27,5 @@ then pass `context` as an argument to your AudioWorkletNode
 
 ## caveats
 Due to SPN restrictions the number of input and output ports is limited to 1, and the minimum buffer length is 256. I've also cut corners here and there, so the polyfill does not accurately follow the spec in all details. Please raise an issue if you find an offending conflict.
+
+AudioParams are still unsupported.
