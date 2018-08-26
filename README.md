@@ -32,3 +32,6 @@ AWPF.polyfill( context ).then(  () => {
 Due to SPN restrictions the number of input and output ports is limited to 1, and the minimum buffer length is 256. I've also cut corners here and there, so the polyfill does not accurately follow the spec in all details. Please raise an issue if you find an offending conflict.
 
 AudioParams are still unsupported.
+
+## similar libraries
+[@developit](https://github.com/developit) has implemented [a similar polyfill](https://github.com/GoogleChromeLabs/audioworklet-polyfill) that uses an isolated main thread scope for audio processing.
