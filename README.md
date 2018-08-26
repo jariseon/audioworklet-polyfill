@@ -11,14 +11,14 @@ Tested in stable Chrome 64, Firefox 57 and Safari 11. Edge test is still pending
 More info at [webaudiomodules.org](http://www.webaudiomodules.org/blog/audioworklet_polyfill/)
 
 ## usage
-```
+```html
 <script src="audioworklet.js"></script>
 <!-- audioworker.js should also reside at root -->
+const context = new AudioContext();
 
-var context = new AudioContext();
-AWPF.polyfill( context ).then( function () {
+AWPF.polyfill( context ).then(  () => {
   // that's it, then just proceed 'normally'
-  // var awn = new MyAudioWorkletNode( context );
+  // const awn = new MyAudioWorkletNode( context );
   // ...
 });
 ```
