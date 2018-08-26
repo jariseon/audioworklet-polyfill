@@ -13,14 +13,16 @@ More info at [webaudiomodules.org](http://www.webaudiomodules.org/blog/audiowork
 ## usage
 ```html
 <script src="audioworklet.js"></script>
-<!-- audioworker.js should also reside at root -->
+<script>
+// audioworker.js should also reside at root
 const context = new AudioContext();
 
-AWPF.polyfill( context ).then(  () => {
+AWPF.polyfill( context ).then( () => {
   // that's it, then just proceed 'normally'
   // const awn = new MyAudioWorkletNode( context );
   // ...
 });
+</script>
 ```
 
 `AWPF.polyfill()` resolves immediately if polyfill is not required. Chrome 66 requires AudioContext activation via [user gesture](goo.gl/7K7WLu). This is reflected in the polyfill, which now accepts AudioContext instance as an argument.
