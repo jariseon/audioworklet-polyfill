@@ -73,10 +73,10 @@ onmessage = function (e) {
       // -- slice io to match with SPN bufferlength
       var a = msg.args;
       var slices = [];
-      var buflen = 128;
-      var numSlices = (a.options.samplesPerBuffer/buflen)|0;
+      var buflen = a.options.buflenAWP;
+      var numSlices = (a.options.buflenSPN / buflen)|0;
       
-      hasSAB = (a.bufferCount === undefined);
+      hasSAB = a.hasSAB;
       if (hasSAB) {
         for (var i=0; i<numSlices; i++) {
           var sliceStart = i * buflen;
@@ -95,8 +95,8 @@ onmessage = function (e) {
             }
             return ports;
           }
-          var inbus  = createBus(a.bus.input);
-          var outbus = createBus(a.bus.output);
+          var inbus  = createBus(a.audio.input);
+          var outbus = createBus(a.audio.output);
 
           slices.push({ inbus:inbus, outbus:outbus });
         }
@@ -107,6 +107,7 @@ onmessage = function (e) {
       processor.node = a.node;
       processor.id = AWGS.processors.length;
       processor.numSlices = numSlices;
+      processor.buflen = buflen;
       AWGS.processors.push({ awp:processor, slices:slices });
       postMessage({ type:"state", node:a.node, processor:processor.id, state:"running" });
       break;
@@ -120,15 +121,20 @@ onmessage = function (e) {
             processor.awp.process(slice.inbus, slice.outbus, []);
           }
         }
-        else if (msg.buf.byteLength) {
-          var buf = new Float32Array(msg.buf);
-          var start = 0;
+        else if (msg.buf[0].byteLength) {
+          var outbufs = [];
+          for (var c = 0; c < msg.buf.length; c++)
+            outbufs.push(new Float32Array(msg.buf[c]));
+          
+          var n = 0;
           for (var i=0; i<processor.awp.numSlices; i++) {
-            var arr = buf.subarray(start, start + 128);
-            processor.awp.process([], [[arr]], []);
-            start += 128;
+            var outs = [];
+            for (var c = 0; c < msg.buf.length; c++)
+              outs.push(outbufs[c].subarray(n, n + processor.awp.buflen));
+            processor.awp.process([], [outs], []);
+            n += processor.awp.buflen;
           }
-          postMessage({ buf:msg.buf, type:"process", node:processor.awp.node }, [msg.buf]);         
+          postMessage({ buf:msg.buf, type:"process", node:processor.awp.node }, msg.buf);
         }
       }
       break;
