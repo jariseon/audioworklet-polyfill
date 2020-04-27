@@ -1,5 +1,5 @@
 // AudioWorklet polyfill
-// Jari Kleimola 2017-18 (jari@webaudiomodules.org)
+// Jari Kleimola 2017-20 (jari@webaudiomodules.org)
 //
 var AWGS = { processors:[] }
 
@@ -30,6 +30,7 @@ AWGS.AudioWorkletGlobalScope = function () {
         postMessage({ type:"state", node:nodeID, state:"error" });
         throw new Error("InvalidStateError");
       }
+      processor.inputChannelCount = options.inputChannelCount[0];
       return processor;
     }
     else {
@@ -126,16 +127,23 @@ onmessage = function (e) {
           }
         }
         else if (msg.buf[0].byteLength) {
-          var outbufs = [];
-          for (var c = 0; c < msg.buf.length; c++)
+          let inbufs  = [];
+          let outbufs = [];
+          let c;
+          for (c = 0; c < processor.awp.inputChannelCount; c++)
+            inbufs.push(new Float32Array(msg.buf[c]));
+          for (; c < msg.buf.length; c++)
             outbufs.push(new Float32Array(msg.buf[c]));
 
           var n = 0;
           for (var i=0; i<processor.awp.numSlices; i++) {
-            var outs = [];
-            for (var c = 0; c < msg.buf.length; c++)
+            let ins  = [];
+            let outs = [];
+            for (let c = 0; c < inbufs.length; c++)
+              ins.push(inbufs[c].subarray(n, n + processor.awp.buflen));
+            for (let c = 0; c < outbufs.length; c++)
               outs.push(outbufs[c].subarray(n, n + processor.awp.buflen));
-            processor.awp.process([], [outs], []);
+            processor.awp.process([ins], [outs], []);
             n += processor.awp.buflen;
           }
           postMessage({ buf:msg.buf, type:"process", node:processor.awp.node }, msg.buf);

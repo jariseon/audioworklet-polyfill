@@ -1,5 +1,5 @@
 // AudioWorklet polyfill
-// Jari Kleimola 2017-18 (jari@webaudiomodules.org)
+// Jari Kleimola 2017-20 (jari@webaudiomodules.org)
 //
 // loosely based on https://github.com/GoogleChromeLabs/houdini-samples/blob/master/animation-worklet/anim-worklet.js
 // feature detection borrowed from Google's AudioWorklet demo page
@@ -10,8 +10,9 @@ AudioContext = window.AudioContext || window.webkitAudioContext;
   "use strict";
 
   // namespace to avoid global scope pollution
+  // disabling SABs for now
   window.AWPF = window.AWPF || {}
-  AWPF.hasSAB = window.SharedArrayBuffer !== undefined;
+  AWPF.hasSAB = false; // window.SharedArrayBuffer !== undefined;
   AWPF.origin = "";
 
   // --------------------------------------------------------------------------
@@ -87,12 +88,11 @@ AudioContext = window.AudioContext || window.webkitAudioContext;
     //
     options = options || {}
     options.buflenAWP = options.buflenAWP || 128;
-    options.buflenSPN = options.buflenSPN || 256;
+    options.buflenSPN = options.buflenSPN || (AWPF.hasSAB ? 256 : 512);
     options.numberOfInputs = options.numberOfInputs || 0;
     if (options.numberOfOutputs === undefined)      options.numberOfOutputs = 1;
     if (options.outputChannelCount === undefined)   options.outputChannelCount = [1];
-    if (options.inputChannelCount === undefined)    options.inputChannelCount  = [];
-  //if (options.inputChannelCount.length  != options.numberOfInputs)  throw new Error("InvalidArgumentException");
+    if (options.numberOfInputs) options.inputChannelCount = [2];
     if (options.outputChannelCount.length != options.numberOfOutputs) throw new Error("InvalidArgumentException");
 
     var nslices = (options.buflenSPN / options.buflenAWP) | 0;
@@ -129,7 +129,7 @@ AudioContext = window.AudioContext || window.webkitAudioContext;
     this.processorState = "pending";
     var args = { node:this.id, name:nodeName, options:options, hasSAB:AWPF.hasSAB }
     args.audio = { input:audioIn, output:audioOut }
-    AWPF.worker.postMessage({ type:"createProcessor", args:args }, [messageChannel.port2])
+    AWPF.worker.postMessage({ type:"createProcessor", args }, [messageChannel.port2])
 
     this.onprocessorstatechange = function (e) {
       this.processorState = e.detail;
@@ -147,6 +147,10 @@ AudioContext = window.AudioContext || window.webkitAudioContext;
 
       var render = function () {
         var msg = { type:"process", processor:self.processor, time:context.currentTime, buf:[] };
+        if (audioIn) {
+          for (var c=0; c<audioIn.length; c++)
+            msg.buf.push(audioIn[c][curbuf].buffer);
+        }
         for (var c=0; c<audioOut.length; c++)
           msg.buf.push(audioOut[c][curbuf].buffer);
         AWPF.worker.postMessage(msg, msg.buf);
@@ -155,8 +159,13 @@ AudioContext = window.AudioContext || window.webkitAudioContext;
       }
 
       this.onRender = function (buf) {
-        audioOut[0][curbuf ? 0:1] = new Float32Array(buf[0]);
-        audioOut[1][curbuf ? 0:1] = new Float32Array(buf[1]);
+        let c = 0;
+        if (audioIn) {
+          audioIn[0][curbuf ? 0:1]  = new Float32Array(buf[c++]);
+          audioIn[1][curbuf ? 0:1]  = new Float32Array(buf[c++]);
+        }
+        audioOut[0][curbuf ? 0:1] = new Float32Array(buf[c++]);
+        audioOut[1][curbuf ? 0:1] = new Float32Array(buf[c]);
         newBufferAvailable = true;
       }
     }
@@ -193,6 +202,8 @@ AudioContext = window.AudioContext || window.webkitAudioContext;
         AWPF.worker.postMessage(msg);
       }
       else {
+        if (audioIn) for (var c=0; c<audioIn.length; c++)
+          audioIn[c][curbuf].set(ibuff.getChannelData(c));
         for (var c=0; c<audioOut.length; c++)
           obuff.getChannelData(c).set(audioOut[c][curbuf]);
         if (newBufferAvailable)
