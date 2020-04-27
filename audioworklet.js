@@ -88,7 +88,7 @@ AudioContext = window.AudioContext || window.webkitAudioContext;
     //
     options = options || {}
     options.buflenAWP = options.buflenAWP || 128;
-    options.buflenSPN = options.buflenSPN || (AWPF.hasSAB ? 256 : 512);
+    options.buflenSPN = options.buflenSPN ||  AWPF.buflenSPN;
     options.numberOfInputs = options.numberOfInputs || 0;
     if (options.numberOfOutputs === undefined)      options.numberOfOutputs = 1;
     if (options.outputChannelCount === undefined)   options.outputChannelCount = [1];
@@ -222,17 +222,19 @@ AudioContext = window.AudioContext || window.webkitAudioContext;
       window.AudioWorkletNode;
   }
 
-  AWPF.polyfill = function (scope, forcePolyfill) {
+  AWPF.polyfill = function (scope, options) {
     return new Promise( function (resolve) {
 
-      if (!forcePolyfill && AWPF.AudioWorkletAvailable(scope))
+      if (AWPF.AudioWorkletAvailable(scope))
         resolve();
       else {
+        options = options || {};
+        AWPF.buflenSPN = options.buflenSPN || 512;
         AWPF.descriptorMap = {}; // node name to parameter descriptor map (should be in BAC)
         AWPF.workletNodes  = [];
         AWPF.audioWorklet = AWPF.PolyfillAudioWorklet();
         AWPF.context = scope;
-        if (!forcePolyfill || !AWPF.AudioWorkletAvailable(scope))
+        if (!AWPF.AudioWorkletAvailable(scope))
           scope.audioWorklet = AWPF.audioWorklet;
         window.AudioWorkletNode = AWPF.AudioWorkletNode;
 
