@@ -229,7 +229,7 @@ AudioContext = window.AudioContext || window.webkitAudioContext;
           resp.text().then(function (s) {
             var u = window.URL.createObjectURL(new Blob([s]));
             AWPF.worker = new Worker(u);
-            AWPF.worker.postMessage({ type:"init", sampleRate:scope.sampleRate });
+            AWPF.worker.postMessage({ type:"init", sampleRate:scope.sampleRate, origin });
 
             console.warn('Using Worker polyfill of AudioWorklet');
             AWPF.isAudioWorkletPolyfilled = true;

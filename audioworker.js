@@ -12,11 +12,12 @@ AWGS.AudioWorkletGlobalScope = function () {
   function registerOnWorker(name, ctor) {
     if (!ctors[name]) {
       ctors[name] = ctor;
-      postMessage({ type:"register", name:name, descriptor:ctor.parameterDescriptors });
+      let descriptor = ctor.parameterDescriptors || {}
+      postMessage({ type:"register", name:name, descriptor });
     }
     else {
       postMessage({ type:"state", node:nodeID, state:"error" });
-      throw new Error("AlreadyRegistered");      
+      throw new Error("AlreadyRegistered");
     }
   };
 
@@ -33,7 +34,7 @@ AWGS.AudioWorkletGlobalScope = function () {
     }
     else {
       postMessage({ type:"state", node:nodeID, state:"error" });
-      throw new Error("NotSupportedException");       
+      throw new Error("NotSupportedException");
     }
   }
 
@@ -41,7 +42,7 @@ AWGS.AudioWorkletGlobalScope = function () {
     constructor (options) { this.port = options._port; }
     process (inputs, outputs, params) {}
   }
-  
+
   return {
     'AudioWorkletProcessor': AudioWorkletProcessorPolyfill,
     'registerProcessor': registerOnWorker,
@@ -55,6 +56,7 @@ AudioWorkletProcessor   = AudioWorkletGlobalScope.AudioWorkletProcessor;
 registerProcessor = AudioWorkletGlobalScope.registerProcessor;
 sampleRate = 44100;
 hasSAB = true;
+origin = "";
 
 onmessage = function (e) {
   var msg = e.data;
@@ -62,20 +64,22 @@ onmessage = function (e) {
 
     case "init":
       sampleRate = AudioWorkletGlobalScope.sampleRate = msg.sampleRate;
+      origin = msg.origin + "/";
       break;
-      
+
     case "import":
-      importScripts(msg.url);
+      let url = msg.url.indexOf("http") == 0 ? msg.url : origin + msg.url;
+      importScripts(url);
       postMessage({ type:"load", url:msg.url });
       break;
-      
+
     case "createProcessor":
       // -- slice io to match with SPN bufferlength
       var a = msg.args;
       var slices = [];
       var buflen = a.options.buflenAWP;
       var numSlices = (a.options.buflenSPN / buflen)|0;
-      
+
       hasSAB = a.hasSAB;
       if (hasSAB) {
         for (var i=0; i<numSlices; i++) {
@@ -85,7 +89,7 @@ onmessage = function (e) {
           // -- create io buses
           function createBus (buffers) {
             var ports = [];
-            for (var iport=0; iport<buffers.length; iport++) {          
+            for (var iport=0; iport<buffers.length; iport++) {
               var port = [];
               for (var channel=0; channel<buffers[iport].length; channel++) {
                 var buf = new Float32Array(buffers[iport][channel]);
@@ -111,7 +115,7 @@ onmessage = function (e) {
       AWGS.processors.push({ awp:processor, slices:slices });
       postMessage({ type:"state", node:a.node, processor:processor.id, state:"running" });
       break;
-      
+
     case "process":
       var processor = AWGS.processors[msg.processor];
       if (processor) {
@@ -125,7 +129,7 @@ onmessage = function (e) {
           var outbufs = [];
           for (var c = 0; c < msg.buf.length; c++)
             outbufs.push(new Float32Array(msg.buf[c]));
-          
+
           var n = 0;
           for (var i=0; i<processor.awp.numSlices; i++) {
             var outs = [];
