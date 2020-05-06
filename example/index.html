@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta http-equiv="content-type" content="text/html; charset=UTF-8">
+  <meta charset="utf-8">
+
+  <title>Audioworklet with polyfill</title>
+  <script src="audioworklet.js"></script>
+  <script src="console.js"></script>
+
+</head>
+
+<body>
+  <pre class="console">
+
+    </pre>
+  <script>
+    // The reason we use ConsoleJS is so that its easier
+    // to see console logs in all devices, including phones.
+    ConsoleJS.init({
+      selector: "pre.console"
+    });
+
+    // audioworker.js should also reside at root
+    const audioContext = new AudioContext();
+
+    // -- buflenSPN defines ScriptProcessorNode buffer length in samples
+    // -- default is 512. use larger values if there are audible glitches
+    AWPF.polyfill(audioContext, { buflenSPN: 512, buflenAWP: 512 }).then(() => {
+
+      console.log("Loading audioprocessor");
+      // Initialize module and create a node for processing.
+      return audioContext.audioWorklet.addModule("audioprocessor.js");
+    }).then(() => {
+      console.log("Getting stream");
+      // Get stream and create audio graph source
+      return navigator.mediaDevices.getUserMedia({ audio: {
+        noiseSuppression: false,
+        echoCancellation: false,
+        autoGainControl: false
+      } });
+    }).then((stream) => {
+      console.log("Creating audio graph");
+      const mic = audioContext.createMediaStreamSource(stream);
+      let pn = new AudioWorkletNode(audioContext, "audioprocessor", { numberOfInputs: 1, numberOfOutputs: 1, outputChannelCount: [2] });
+      pn.port.onmessage = (e) => {
+        // print the message coming from the processor.
+        console.log(e.data);
+      }
+      // Wait for 10 seconds and stop the stream as well as
+      // the audio processor.
+      setTimeout(() => {
+        console.log("Stopping the show.");
+        pn.port.postMessage("stop");
+        setTimeout(() => {
+          if(pn.input) { pn.input.onaudioprocess = null; }
+        }, 1000);
+        stream.getTracks().forEach(track => {
+          track.stop();
+        });
+      }, 10000);
+      // Connect the graph.
+      mic.connect(pn.input ? pn.input : pn);
+      pn.connect(audioContext.destination);
+
+    }).catch((e) => {
+      console.log(e.message);
+      console.log(e);
+    });
+  </script>
+</body>
+
+</html>
