@@ -153,6 +153,7 @@ onmessage = function (e) {
         }
         if(resume === false) {
           postMessage({ type: "stop", node: processor.awp.node, id: processor.awp.id });
+          // remove this processor from the list.
           AWGS.processors = AWGS.processors.filter(p => p !== processor);
         }
       }
