@@ -119,11 +119,13 @@ onmessage = function (e) {
 
     case "process":
       var processor = AWGS.processors[msg.processor];
+      var resume = true;
       if (processor) {
         if (hasSAB) {
           for (var i=0; i<processor.slices.length; i++) {
             var slice = processor.slices[i];
-            processor.awp.process(slice.inbus, slice.outbus, []);
+            resume = processor.awp.process(slice.inbus, slice.outbus, []);
+            if(!resume) break;
           }
         }
         else if (msg.buf[0].byteLength) {
@@ -143,10 +145,16 @@ onmessage = function (e) {
               ins.push(inbufs[c].subarray(n, n + processor.awp.buflen));
             for (let c = 0; c < outbufs.length; c++)
               outs.push(outbufs[c].subarray(n, n + processor.awp.buflen));
-            processor.awp.process([ins], [outs], []);
+            resume = processor.awp.process([ins], [outs], []);
+            if(!resume) break;
             n += processor.awp.buflen;
           }
           postMessage({ buf:msg.buf, type:"process", node:processor.awp.node }, msg.buf);
+        }
+        if(resume === false) {
+          postMessage({ type: "stop", node: processor.awp.node, id: processor.awp.id });
+          // remove this processor from the list.
+          AWGS.processors = AWGS.processors.filter(p => p !== processor);
         }
       }
       break;
