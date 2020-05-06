@@ -63,6 +63,12 @@ AudioContext = window.AudioContext || window.webkitAudioContext;
           var node = AWPF.workletNodes[msg.node];
           node.onRender(msg.buf);
           break;
+        case "stop":
+          var node = AWPF.workletNodes[msg.node];
+          node.input.onaudioprocess = null;
+          // remove the node from the list.
+          AWPF.workletNodes = AWPF.workletNodes.filter(n => n !== node);
+          break;
       }
     }
 
