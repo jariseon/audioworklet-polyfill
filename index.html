@@ -43,7 +43,7 @@
     }).then((stream) => {
       console.log("Creating audio graph");
       const mic = audioContext.createMediaStreamSource(stream);
-      let pn = new AudioWorkletNode(audioContext, "audioprocessor", { numberOfInputs: 1, numberOfOutputs: 1, outputChannelCount: [2] });
+      let pn = new AudioWorkletNode(audioContext, "audioprocessor", { numberOfInputs: 1, outputChannelCount: [2] });
       pn.port.onmessage = (e) => {
         // print the message coming from the processor.
         console.log(e.data);
